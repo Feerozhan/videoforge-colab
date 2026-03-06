@@ -517,8 +517,8 @@ async def run_auto_edit(project_id: int, mode: str = "slideshow", show_subtitles
                 )
                 scenes = scenes_result.scalars().all()
                 image_paths = [
-                    s.keyframe_path for s in scenes
-                    if s.keyframe_path and os.path.exists(s.keyframe_path)
+                    s.keyframe_path.replace('\\', '/') for s in scenes
+                    if s.keyframe_path and os.path.exists(s.keyframe_path.replace('\\', '/'))
                 ]
                 if not image_paths:
                     _edit_progress[project_id] = {
@@ -555,9 +555,10 @@ async def run_auto_edit(project_id: int, mode: str = "slideshow", show_subtitles
 
                 _edit_progress[project_id] = {"step": "rendering", "progress": 5, "mode": mode}
 
+                tts_safe = tts_audio.replace('\\', '/') if tts_audio else None
                 await loop.run_in_executor(
                     None, build_slideshow_from_images,
-                    image_paths, tts_audio, output_path,
+                    image_paths, tts_safe, output_path,
                     target_w, target_h, target_duration,
                     subtitles, show_subtitles, 24, 0.5, update_progress
                 )
@@ -594,9 +595,12 @@ async def run_auto_edit(project_id: int, mode: str = "slideshow", show_subtitles
                 target_w, target_h = get_target_size(timeline.aspect_ratio)
                 _edit_progress[project_id] = {"step": "rendering", "progress": 20, "mode": mode}
 
+                safe_video = project.video_path.replace('\\', '/') if project.video_path else None
+                safe_tts = timeline.tts_audio_path.replace('\\', '/') if timeline.tts_audio_path else None
+
                 await loop.run_in_executor(
                     None, build_video_from_timeline,
-                    project.video_path, clips_data, timeline.tts_audio_path,
+                    safe_video, clips_data, safe_tts,
                     output_path, timeline.aspect_ratio, target_w, target_h, update_progress
                 )
 

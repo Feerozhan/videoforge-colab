@@ -215,9 +215,10 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
 
     # Delete files
     for path in [project.video_path, project.audio_path]:
-        if path and os.path.exists(path):
+        safe_path = path.replace('\\', '/') if path else None
+        if safe_path and os.path.exists(safe_path):
             try:
-                os.remove(path)
+                os.remove(safe_path)
             except Exception:
                 pass
 

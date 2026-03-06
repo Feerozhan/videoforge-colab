@@ -247,7 +247,7 @@ async def get_timeline(project_id: int, db: AsyncSession = Depends(get_db)):
         "aspect_ratio": timeline.aspect_ratio,
         "tts_audio_url": (
             f"/storage/tts/project_{project_id}_tts.wav"
-            if timeline.tts_audio_path and os.path.exists(timeline.tts_audio_path) else None
+            if timeline.tts_audio_path else None
         ),
         "clips": [
             {
@@ -260,8 +260,8 @@ async def get_timeline(project_id: int, db: AsyncSession = Depends(get_db)):
                 "script_paragraph": c.script_paragraph,
                 # FIXED: use Path.name to avoid double "scene_scene_" bug
                 "keyframe_url": (
-                    f"/storage/frames/project_{project_id}/{Path(c.keyframe_path).name}"
-                    if c.keyframe_path and os.path.exists(c.keyframe_path) else None
+                    f"/storage/frames/project_{project_id}/{Path(c.keyframe_path.replace('\\', '/')).name}"
+                    if c.keyframe_path else None
                 ),
                 "adjustments": c.adjustments_dict,
                 "transition_in": c.transition_in,

@@ -145,11 +145,12 @@ async def crop_all_keyframes(project_id: int, target_w: int, target_h: int):
 
         loop = asyncio.get_event_loop()
         for clip in clips:
-            if clip.keyframe_path and os.path.exists(clip.keyframe_path):
-                cropped_dir = Path(clip.keyframe_path).parent / "cropped"
+            safe_keyframe = clip.keyframe_path.replace('\\', '/') if clip.keyframe_path else None
+            if safe_keyframe and os.path.exists(safe_keyframe):
+                cropped_dir = Path(safe_keyframe).parent / "cropped"
                 cropped_dir.mkdir(parents=True, exist_ok=True)
-                cropped_path = str(cropped_dir / Path(clip.keyframe_path).name)
+                cropped_path = str(cropped_dir / Path(safe_keyframe).name)
                 await loop.run_in_executor(
                     None, smart_crop_frame,
-                    clip.keyframe_path, target_w, target_h, cropped_path
+                    safe_keyframe, target_w, target_h, cropped_path
                 )

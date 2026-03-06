@@ -231,11 +231,14 @@ async def run_analysis(project_id: int, language: str = None):
             await db.commit()
 
             total = len(scenes_data)
+            # Ensure cross-platform path compatibility for video_path
+            safe_video_path = project.video_path.replace('\\', '/') if project.video_path else None
+            
             for i, scene_info in enumerate(scenes_data):
                 mid_time = (scene_info["start_time"] + scene_info["end_time"]) / 2
-                keyframe_path = str(frames_dir / f"scene_{scene_info['index']:04d}.jpg")
+                keyframe_path = str(frames_dir / f"scene_{scene_info['index']:04d}.jpg").replace('\\', '/')
                 success = await loop.run_in_executor(
-                    None, extract_keyframe, project.video_path, mid_time, keyframe_path
+                    None, extract_keyframe, safe_video_path, mid_time, keyframe_path
                 )
                 db.add(Scene(
                     project_id=project_id,
@@ -272,8 +275,15 @@ async def start_analysis(
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    if not project.audio_path or not os.path.exists(project.audio_path):
-        raise HTTPException(status_code=400, detail="Audio file not found. Upload a video first.")
+
+    safe_audio_path = project.audio_path.replace('\\', '/') if project.audio_path else None
+    
+    if not safe_audio_path:
+        raise HTTPException(status_code=400, detail="Audio file not found in DB. Upload a video first.")
+        
+    resolved_path = Path(safe_audio_path).resolve()
+    if not resolved_path.exists():
+        raise HTTPException(status_code=400, detail=f"Audio file not found on disk at {resolved_path}. Upload a video first.")
 
     background_tasks.add_task(run_analysis, project_id, language)
     return {"message": "Analysis started", "project_id": project_id, "language": language}
@@ -314,8 +324,8 @@ async def get_scenes(project_id: int, db: AsyncSession = Depends(get_db)):
             "end_time": s.end_time,
             "duration": round(s.end_time - s.start_time, 2),
             "keyframe_url": (
-                f"/storage/frames/project_{project_id}/scene_{s.scene_index:04d}.jpg"
-                if s.keyframe_path and os.path.exists(s.keyframe_path) else None
+                f"/storage/frames/project_{project_id}/{Path(s.keyframe_path.replace('\\', '/')).name}"
+                if s.keyframe_path else None
             ),
         }
         for s in scenes

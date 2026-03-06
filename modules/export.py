@@ -119,7 +119,9 @@ async def run_export(project_id: int, resolution: str, bitrate: str):
             _export_progress[project_id] = {"step": "error", "error": "Draft video not found. Run Auto Edit first."}
             return
 
-        if not os.path.exists(timeline.draft_video_path):
+        safe_draft_video = timeline.draft_video_path.replace('\\', '/')
+
+        if not os.path.exists(safe_draft_video):
             _export_progress[project_id] = {"step": "error", "error": "Draft video file missing on disk."}
             return
 
@@ -136,7 +138,7 @@ async def run_export(project_id: int, resolution: str, bitrate: str):
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
                 None, do_ffmpeg_export,
-                timeline.draft_video_path,
+                safe_draft_video,
                 output_path,
                 w, h,
                 brates["video"],
@@ -198,11 +200,16 @@ async def download_export(project_id: int, db: AsyncSession = Depends(get_db)):
         select(Timeline).where(Timeline.project_id == project_id, Timeline.is_current == True)
     )
     timeline = tl_result.scalar_one_or_none()
-    if not timeline or not timeline.export_video_path or not os.path.exists(timeline.export_video_path):
+    if not timeline or not timeline.export_video_path:
         raise HTTPException(status_code=404, detail="Exported video not ready")
+        
+    safe_export_video = timeline.export_video_path.replace('\\', '/')
+    if not os.path.exists(safe_export_video):
+        raise HTTPException(status_code=404, detail="Exported video not found on disk")
+        
     return FileResponse(
-        timeline.export_video_path,
+        safe_export_video,
         media_type="video/mp4",
-        filename=Path(timeline.export_video_path).name,
-        headers={"Content-Disposition": f"attachment; filename={Path(timeline.export_video_path).name}"}
+        filename=Path(safe_export_video).name,
+        headers={"Content-Disposition": f"attachment; filename={Path(safe_export_video).name}"}
     )
