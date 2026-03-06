@@ -316,17 +316,15 @@ async def get_scenes(project_id: int, db: AsyncSession = Depends(get_db)):
         select(Scene).where(Scene.project_id == project_id).order_by(Scene.start_time)
     )
     scenes = result.scalars().all()
-    return [
-        {
+    response_scenes = []
+    for s in scenes:
+        keyframe_name = Path(s.keyframe_path.replace('\\', '/')).name if s.keyframe_path else None
+        response_scenes.append({
             "id": s.id,
             "scene_index": s.scene_index,
             "start_time": s.start_time,
             "end_time": s.end_time,
             "duration": round(s.end_time - s.start_time, 2),
-            "keyframe_url": (
-                f"/storage/frames/project_{project_id}/{Path(s.keyframe_path.replace('\\', '/')).name}"
-                if s.keyframe_path else None
-            ),
-        }
-        for s in scenes
-    ]
+            "keyframe_url": f"/storage/frames/project_{project_id}/{keyframe_name}" if keyframe_name else None,
+        })
+    return response_scenes

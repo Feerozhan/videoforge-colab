@@ -240,6 +240,23 @@ async def get_timeline(project_id: int, db: AsyncSession = Depends(get_db)):
     )
     clips = clips_result.scalars().all()
 
+    response_clips = []
+    for c in clips:
+        keyframe_name = Path(c.keyframe_path.replace('\\', '/')).name if c.keyframe_path else None
+        response_clips.append({
+            "id": c.id,
+            "clip_index": c.clip_index,
+            "source_start": c.source_start,
+            "source_end": c.source_end,
+            "timeline_start": c.timeline_start,
+            "timeline_end": c.timeline_end,
+            "script_paragraph": c.script_paragraph,
+            "keyframe_url": f"/storage/frames/project_{project_id}/{keyframe_name}" if keyframe_name else None,
+            "adjustments": c.adjustments_dict,
+            "transition_in": c.transition_in,
+            "transition_out": c.transition_out,
+        })
+
     return {
         "timeline_id": timeline.id,
         "project_id": project_id,
@@ -249,24 +266,5 @@ async def get_timeline(project_id: int, db: AsyncSession = Depends(get_db)):
             f"/storage/tts/project_{project_id}_tts.wav"
             if timeline.tts_audio_path else None
         ),
-        "clips": [
-            {
-                "id": c.id,
-                "clip_index": c.clip_index,
-                "source_start": c.source_start,
-                "source_end": c.source_end,
-                "timeline_start": c.timeline_start,
-                "timeline_end": c.timeline_end,
-                "script_paragraph": c.script_paragraph,
-                # FIXED: use Path.name to avoid double "scene_scene_" bug
-                "keyframe_url": (
-                    f"/storage/frames/project_{project_id}/{Path(c.keyframe_path.replace('\\', '/')).name}"
-                    if c.keyframe_path else None
-                ),
-                "adjustments": c.adjustments_dict,
-                "transition_in": c.transition_in,
-                "transition_out": c.transition_out,
-            }
-            for c in clips
-        ]
+        "clips": response_clips
     }
