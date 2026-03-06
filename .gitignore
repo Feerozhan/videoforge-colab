@@ -1,0 +1,21 @@
+# Environments
+venv/
+env/
+.env
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Projects and generated data
+projects/
+output/
+tmp/
+*.mp4
+*.wav
+*.mp3
+
+# IDEs
+.idea/
+.vscode/
